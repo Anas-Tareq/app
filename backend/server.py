@@ -48,6 +48,10 @@ class ProductTranslation(BaseModel):
     benefits: List[str]
     ingredients: List[str]
     usage_instructions: str
+    # New fields for supplements
+    active_ingredients: Optional[str] = None  # المكونات النشطة
+    recommended_dosage: Optional[str] = None  # الجرعة الموصى بها
+    usage_warnings: Optional[str] = None  # تحذيرات الاستخدام
 
 class Product(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
