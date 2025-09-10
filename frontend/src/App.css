@@ -1,21 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* Elyvra Brand Colors */
 :root {
-  /* Elyvra Brand Colors */
-  --charcoal-black: #1a1a1c;
-  --deep-navy: #0f1419;
-  --metallic-gray: #4a5568;
-  --light-gray: #a0aec0;
-  --burnt-orange: #c05621;
-  --muted-gold: #b7791f;
-  --accent-orange: #ed8936;
-  --glass-bg: rgba(26, 26, 28, 0.9);
-  --glass-border: rgba(160, 174, 192, 0.1);
+  --charcoal-black: #1c1c1c;
+  --dark-charcoal: #2a2a2a;
+  --medium-gray: #404040;
+  --light-gray: #b8bcc8;
+  --accent-gold: #d4af37;
+  --muted-gold: #b8941f;
+  --glass-bg: rgba(0, 0, 0, 0.7);
+  --glass-border: rgba(212, 175, 55, 0.2);
+  --glass-gradient: linear-gradient(135deg, rgba(28, 28, 28, 0.9) 0%, rgba(42, 42, 42, 0.8) 100%);
+  --accent-gradient: linear-gradient(135deg, #d4af37 0%, #b8941f 100%);
   
-  /* Gradients */
-  --primary-gradient: linear-gradient(135deg, var(--charcoal-black) 0%, var(--deep-navy) 100%);
-  --accent-gradient: linear-gradient(135deg, var(--burnt-orange) 0%, var(--muted-gold) 100%);
-  --glass-gradient: linear-gradient(135deg, rgba(26, 26, 28, 0.95) 0%, rgba(15, 20, 25, 0.9) 100%);
+  /* Legacy compatibility */
+  --burnt-orange: #d4af37;
+  --accent-orange: #d4af37;
+  --primary-gradient: linear-gradient(135deg, var(--charcoal-black) 0%, var(--dark-charcoal) 50%, var(--medium-gray) 100%);
 }
 
 * {
