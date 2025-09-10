@@ -202,12 +202,72 @@ class AdminCreate(BaseModel):
     password: str
     full_name: str
 
+# Marketing & Promotion Models
+class DiscountType(str, Enum):
+    PERCENTAGE = "percentage"
+    FIXED_AMOUNT = "fixed_amount"
+    FREE_SHIPPING = "free_shipping"
+
+class Coupon(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    code: str
+    description: str
+    discount_type: DiscountType
+    discount_value: float
+    minimum_order_amount: Optional[float] = None
+    max_usage_count: Optional[int] = None
+    current_usage_count: int = 0
+    valid_from: datetime
+    valid_until: datetime
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CouponCreate(BaseModel):
+    code: str
+    description: str
+    discount_type: DiscountType
+    discount_value: float
+    minimum_order_amount: Optional[float] = None
+    max_usage_count: Optional[int] = None
+    valid_from: datetime
+    valid_until: datetime
+    is_active: bool = True
+
+# Blog & Content Models
+class BlogPost(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: Dict[str, str]  # Multi-language titles
+    content: Dict[str, str]  # Multi-language content
+    excerpt: Dict[str, str]  # Multi-language excerpts
+    featured_image: Optional[str] = None
+    author: str
+    published: bool = False
+    featured: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class BlogPostCreate(BaseModel):
+    title: Dict[str, str]
+    content: Dict[str, str]
+    excerpt: Dict[str, str]
+    featured_image: Optional[str] = None
+    author: str
+    published: bool = False
+    featured: bool = False
+
+# Enhanced Admin Stats
 class AdminStats(BaseModel):
     total_products: int
     total_carts: int
     active_carts: int
+    total_orders: int
+    total_customers: int
+    total_revenue: float
     products_by_category: Dict[str, int]
+    orders_by_status: Dict[str, int]
     recent_activity: List[Dict[str, Any]]
+    sales_chart_data: List[Dict[str, Any]]
+    top_selling_products: List[Dict[str, Any]]
 
 
 # Helper functions
