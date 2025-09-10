@@ -66,6 +66,12 @@ class Product(BaseModel):
     translations: Dict[str, ProductTranslation]
     tags: List[str] = []
     featured: bool = False
+    # New supplement-specific fields
+    certifications: List[str] = []  # شهادات الجودة (URLs to certificate files/images)
+    expiry_date: Optional[datetime] = None  # تاريخ انتهاء الصلاحية
+    manufacturing_date: Optional[datetime] = None  # تاريخ الإنتاج
+    batch_number: Optional[str] = None  # رقم الدفعة
+    storage_conditions: Optional[str] = None  # ظروف التخزين
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
