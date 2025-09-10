@@ -409,6 +409,79 @@ async def add_to_cart(cart_id: str, item: CartItem):
 
 
 # Initialize some sample products
+@api_router.post("/init-sample-data")
+async def init_simple_sample_data():
+    """Initialize basic sample data"""
+    try:
+        # Create simple customer
+        customer_data = {
+            "email": "ahmed.hassan@example.com",
+            "first_name": "أحمد",
+            "last_name": "حسن",
+            "phone": "+971501234567",
+            "preferred_language": "ar",
+            "segment": "regular",
+            "total_orders": 2,
+            "total_spent": 300.0,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        customer_obj = User(**customer_data)
+        prepared_customer = prepare_for_mongo(customer_obj.dict())
+        await db.users.insert_one(prepared_customer)
+        
+        # Get first product for order
+        products = await db.products.find().limit(1).to_list(length=1)
+        if products:
+            product = products[0]
+            
+            # Create simple order
+            order_data = {
+                "customer_id": customer_obj.id,
+                "items": [{
+                    "product_id": product["id"],
+                    "product_name": product["translations"]["ar"]["name"],
+                    "price": 79.99,
+                    "quantity": 2,
+                    "total": 159.98
+                }],
+                "subtotal": 159.98,
+                "tax_amount": 15.99,
+                "shipping_cost": 10.0,
+                "discount_amount": 0.0,
+                "total_amount": 185.97,
+                "status": "delivered",
+                "payment_method": "credit_card",
+                "shipping_address": {
+                    "street": "شارع الشيخ زايد",
+                    "city": "دبي",
+                    "state": "دبي", 
+                    "country": "الإمارات العربية المتحدة",
+                    "postal_code": "12345"
+                },
+                "billing_address": {
+                    "street": "شارع الشيخ زايد",
+                    "city": "دبي",
+                    "state": "دبي",
+                    "country": "الإمارات العربية المتحدة", 
+                    "postal_code": "12345"
+                },
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            order_obj = Order(**order_data)
+            prepared_order = prepare_for_mongo(order_obj.dict())
+            await db.orders.insert_one(prepared_order)
+            
+            return {"message": "Sample data created", "customer": customer_obj.id, "order": order_obj.id}
+        else:
+            return {"error": "No products found"}
+            
+    except Exception as e:
+        return {"error": str(e)}
+
 @api_router.post("/init-products")
 async def init_sample_products():
     """Initialize sample products for demonstration"""
