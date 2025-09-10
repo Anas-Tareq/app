@@ -691,6 +691,175 @@ async def delete_cart(cart_id: str):
     
     return {"message": "Cart deleted successfully"}
 
+# Order Routes
+@api_router.post("/orders", response_model=Order)
+async def create_order(order: OrderCreate):
+    """Create a new order"""
+    # Calculate totals
+    subtotal = sum(item.total for item in order.items)
+    tax_amount = subtotal * 0.1  # 10% tax
+    shipping_cost = 10.0 if subtotal < 100 else 0.0  # Free shipping over $100
+    
+    # Apply coupon if provided
+    discount_amount = 0.0
+    if order.coupon_code:
+        coupon = await db.coupons.find_one({"code": order.coupon_code, "is_active": True})
+        if coupon and coupon.get("valid_until") and datetime.fromisoformat(coupon["valid_until"]) > datetime.now(timezone.utc):
+            if coupon["discount_type"] == "percentage":
+                discount_amount = subtotal * (coupon["discount_value"] / 100)
+            elif coupon["discount_type"] == "fixed_amount":
+                discount_amount = coupon["discount_value"]
+            elif coupon["discount_type"] == "free_shipping":
+                shipping_cost = 0.0
+    
+    total_amount = subtotal + tax_amount + shipping_cost - discount_amount
+    
+    order_dict = order.dict()
+    order_dict.update({
+        "subtotal": subtotal,
+        "tax_amount": tax_amount,
+        "shipping_cost": shipping_cost,
+        "discount_amount": discount_amount,
+        "total_amount": total_amount
+    })
+    
+    order_obj = Order(**order_dict)
+    prepared_data = prepare_for_mongo(order_obj.dict())
+    await db.orders.insert_one(prepared_data)
+    
+    # Update customer stats
+    await db.users.update_one(
+        {"id": order.customer_id},
+        {
+            "$inc": {"total_orders": 1, "total_spent": total_amount},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+        }
+    )
+    
+    return order_obj
+
+@api_router.get("/orders", response_model=List[Order])
+async def get_orders(
+    status: Optional[OrderStatus] = None,
+    customer_id: Optional[str] = None,
+    limit: int = Query(default=20, le=100),
+    skip: int = Query(default=0, ge=0)
+):
+    """Get orders with optional filtering"""
+    filter_dict = {}
+    
+    if status:
+        filter_dict["status"] = status
+    if customer_id:
+        filter_dict["customer_id"] = customer_id
+    
+    orders = await db.orders.find(filter_dict).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
+    return [Order(**parse_from_mongo(order)) for order in orders]
+
+@api_router.get("/orders/{order_id}", response_model=Order)
+async def get_order(order_id: str):
+    """Get single order by ID"""
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return Order(**parse_from_mongo(order))
+
+@api_router.put("/orders/{order_id}", response_model=Order)
+async def update_order(order_id: str, order_update: OrderUpdate):
+    """Update order status and details"""
+    existing_order = await db.orders.find_one({"id": order_id})
+    if not existing_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    update_dict = order_update.dict(exclude_unset=True)
+    update_dict["updated_at"] = datetime.now(timezone.utc)
+    prepared_data = prepare_for_mongo(update_dict)
+    
+    await db.orders.update_one(
+        {"id": order_id},
+        {"$set": prepared_data}
+    )
+    
+    updated_order = await db.orders.find_one({"id": order_id})
+    return Order(**parse_from_mongo(updated_order))
+
+# Customer Routes
+@api_router.get("/customers", response_model=List[User])
+async def get_customers(
+    segment: Optional[CustomerSegment] = None,
+    limit: int = Query(default=20, le=100),
+    skip: int = Query(default=0, ge=0)
+):
+    """Get customers with optional filtering"""
+    filter_dict = {}
+    if segment:
+        filter_dict["segment"] = segment
+    
+    customers = await db.users.find(filter_dict).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
+    return [User(**parse_from_mongo(customer)) for customer in customers]
+
+@api_router.get("/customers/{customer_id}", response_model=User)
+async def get_customer(customer_id: str):
+    """Get single customer by ID"""
+    customer = await db.users.find_one({"id": customer_id})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return User(**parse_from_mongo(customer))
+
+# Coupon Routes
+@api_router.post("/coupons", response_model=Coupon)
+async def create_coupon(coupon: CouponCreate):
+    """Create a new coupon"""
+    # Check if coupon code already exists
+    existing = await db.coupons.find_one({"code": coupon.code})
+    if existing:
+        raise HTTPException(status_code=400, detail="Coupon code already exists")
+    
+    coupon_obj = Coupon(**coupon.dict())
+    prepared_data = prepare_for_mongo(coupon_obj.dict())
+    await db.coupons.insert_one(prepared_data)
+    return coupon_obj
+
+@api_router.get("/coupons", response_model=List[Coupon])
+async def get_coupons(
+    is_active: Optional[bool] = None,
+    limit: int = Query(default=20, le=100),
+    skip: int = Query(default=0, ge=0)
+):
+    """Get coupons with optional filtering"""
+    filter_dict = {}
+    if is_active is not None:
+        filter_dict["is_active"] = is_active
+    
+    coupons = await db.coupons.find(filter_dict).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
+    return [Coupon(**parse_from_mongo(coupon)) for coupon in coupons]
+
+# Blog Routes
+@api_router.post("/blog", response_model=BlogPost)
+async def create_blog_post(post: BlogPostCreate):
+    """Create a new blog post"""
+    post_obj = BlogPost(**post.dict())
+    prepared_data = prepare_for_mongo(post_obj.dict())
+    await db.blog_posts.insert_one(prepared_data)
+    return post_obj
+
+@api_router.get("/blog", response_model=List[BlogPost])  
+async def get_blog_posts(
+    published: Optional[bool] = None,
+    featured: Optional[bool] = None,
+    limit: int = Query(default=20, le=100),
+    skip: int = Query(default=0, ge=0)
+):
+    """Get blog posts with optional filtering"""
+    filter_dict = {}
+    if published is not None:
+        filter_dict["published"] = published
+    if featured is not None:
+        filter_dict["featured"] = featured
+    
+    posts = await db.blog_posts.find(filter_dict).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
+    return [BlogPost(**parse_from_mongo(post)) for post in posts]
+
 @api_router.post("/admin/init-default-admin")
 async def init_default_admin():
     """Initialize default admin user"""
