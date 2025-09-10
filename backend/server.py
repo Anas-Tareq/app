@@ -595,7 +595,7 @@ async def create_admin(admin_data: AdminCreate):
 
 @api_router.get("/admin/stats", response_model=AdminStats)
 async def get_admin_stats():
-    """Get admin dashboard statistics"""
+    """Get enhanced admin dashboard statistics"""
     # Get total products
     total_products = await db.products.count_documents({})
     
@@ -605,33 +605,88 @@ async def get_admin_stats():
     # Get active carts (with items)
     active_carts = await db.carts.count_documents({"items": {"$ne": []}})
     
+    # Get total orders and customers
+    total_orders = await db.orders.count_documents({})
+    total_customers = await db.users.count_documents({})
+    
+    # Calculate total revenue
+    revenue_pipeline = [
+        {"$group": {"_id": None, "total": {"$sum": "$total_amount"}}}
+    ]
+    revenue_result = await db.orders.aggregate(revenue_pipeline).to_list(length=None)
+    total_revenue = revenue_result[0]["total"] if revenue_result else 0.0
+    
     # Get products by category
-    pipeline = [
+    category_pipeline = [
         {"$group": {"_id": "$category", "count": {"$sum": 1}}}
     ]
-    category_results = await db.products.aggregate(pipeline).to_list(length=None)
+    category_results = await db.products.aggregate(category_pipeline).to_list(length=None)
     products_by_category = {item["_id"]: item["count"] for item in category_results}
     
-    # Get recent activity (recent products and carts)
-    recent_products = await db.products.find().sort("created_at", -1).limit(5).to_list(length=None)
-    recent_carts = await db.carts.find({"items": {"$ne": []}}).sort("created_at", -1).limit(5).to_list(length=None)
+    # Get orders by status
+    status_pipeline = [
+        {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+    ]
+    status_results = await db.orders.aggregate(status_pipeline).to_list(length=None)
+    orders_by_status = {item["_id"]: item["count"] for item in status_results}
+    
+    # Get sales chart data (last 30 days)
+    from datetime import timedelta
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    
+    sales_pipeline = [
+        {"$match": {"created_at": {"$gte": thirty_days_ago.isoformat()}}},
+        {"$group": {
+            "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": {"$dateFromString": {"dateString": "$created_at"}}}},
+            "sales": {"$sum": "$total_amount"},
+            "orders": {"$sum": 1}
+        }},
+        {"$sort": {"_id": 1}}
+    ]
+    sales_data = await db.orders.aggregate(sales_pipeline).to_list(length=None)
+    sales_chart_data = [{"date": item["_id"], "sales": item["sales"], "orders": item["orders"]} for item in sales_data]
+    
+    # Get top selling products
+    top_products_pipeline = [
+        {"$unwind": "$items"},
+        {"$group": {
+            "_id": "$items.product_id",
+            "product_name": {"$first": "$items.product_name"},
+            "total_quantity": {"$sum": "$items.quantity"},
+            "total_revenue": {"$sum": "$items.total"}
+        }},
+        {"$sort": {"total_quantity": -1}},
+        {"$limit": 5}
+    ]
+    top_products_data = await db.orders.aggregate(top_products_pipeline).to_list(length=None)
+    top_selling_products = [
+        {
+            "product_id": item["_id"],
+            "name": item["product_name"],
+            "quantity_sold": item["total_quantity"],
+            "revenue": item["total_revenue"]
+        } for item in top_products_data
+    ]
+    
+    # Get recent activity
+    recent_orders = await db.orders.find().sort("created_at", -1).limit(5).to_list(length=None)
+    recent_products = await db.products.find().sort("created_at", -1).limit(3).to_list(length=None)
     
     recent_activity = []
+    for order in recent_orders:
+        recent_activity.append({
+            "type": "order_created",
+            "message": f"New order #{order.get('id', 'Unknown')[:8]} - ${order.get('total_amount', 0):.2f}",
+            "timestamp": order.get("created_at"),
+            "id": order.get("id")
+        })
+    
     for product in recent_products:
         recent_activity.append({
             "type": "product_created",
             "message": f"Product '{product.get('translations', {}).get('en', {}).get('name', 'Unknown')}' created",
             "timestamp": product.get("created_at"),
             "id": product.get("id")
-        })
-    
-    for cart in recent_carts:
-        item_count = len(cart.get("items", []))
-        recent_activity.append({
-            "type": "cart_updated",
-            "message": f"Cart updated with {item_count} items",
-            "timestamp": cart.get("updated_at"),
-            "id": cart.get("id")
         })
     
     # Sort by timestamp
@@ -642,8 +697,14 @@ async def get_admin_stats():
         total_products=total_products,
         total_carts=total_carts,
         active_carts=active_carts,
+        total_orders=total_orders,
+        total_customers=total_customers,
+        total_revenue=total_revenue,
         products_by_category=products_by_category,
-        recent_activity=recent_activity
+        orders_by_status=orders_by_status,
+        recent_activity=recent_activity,
+        sales_chart_data=sales_chart_data,
+        top_selling_products=top_selling_products
     )
 
 @api_router.put("/admin/products/{product_id}", response_model=Product)
