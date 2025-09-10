@@ -97,7 +97,35 @@ class Cart(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-# User Models
+# Order Status Enum
+class OrderStatus(str, Enum):
+    PENDING_PAYMENT = "pending_payment"
+    PROCESSING = "processing"
+    CONFIRMED = "confirmed"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+
+class PaymentMethod(str, Enum):
+    CREDIT_CARD = "credit_card"
+    PAYPAL = "paypal"
+    CASH_ON_DELIVERY = "cash_on_delivery"
+    BANK_TRANSFER = "bank_transfer"
+
+class CustomerSegment(str, Enum):
+    NEW = "new"
+    REGULAR = "regular"
+    VIP = "vip"
+
+# Enhanced User Models
+class Address(BaseModel):
+    street: str
+    city: str
+    state: str
+    country: str
+    postal_code: str
+
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: str
@@ -105,7 +133,54 @@ class User(BaseModel):
     last_name: str
     phone: Optional[str] = None
     preferred_language: Language = Language.EN
+    billing_address: Optional[Address] = None
+    shipping_address: Optional[Address] = None
+    segment: CustomerSegment = CustomerSegment.NEW
+    total_orders: int = 0
+    total_spent: float = 0.0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Order Models
+class OrderItem(BaseModel):
+    product_id: str
+    product_name: str
+    price: float
+    quantity: int
+    total: float
+
+class Order(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    customer_id: str
+    items: List[OrderItem]
+    subtotal: float
+    tax_amount: float = 0.0
+    shipping_cost: float = 0.0
+    discount_amount: float = 0.0
+    total_amount: float
+    status: OrderStatus = OrderStatus.PENDING_PAYMENT
+    payment_method: Optional[PaymentMethod] = None
+    shipping_address: Address
+    billing_address: Address
+    notes: Optional[str] = None
+    tracking_number: Optional[str] = None
+    coupon_code: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class OrderCreate(BaseModel):
+    customer_id: str
+    items: List[OrderItem]
+    shipping_address: Address
+    billing_address: Address
+    payment_method: PaymentMethod
+    notes: Optional[str] = None
+    coupon_code: Optional[str] = None
+
+class OrderUpdate(BaseModel):
+    status: Optional[OrderStatus] = None
+    tracking_number: Optional[str] = None
+    notes: Optional[str] = None
 
 # Admin Models
 class Admin(BaseModel):
