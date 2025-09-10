@@ -921,6 +921,234 @@ async def get_blog_posts(
     posts = await db.blog_posts.find(filter_dict).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
     return [BlogPost(**parse_from_mongo(post)) for post in posts]
 
+@api_router.post("/admin/init-sample-data")
+async def init_sample_data():
+    """Initialize sample data for dashboard testing"""
+    
+    # Create sample customers
+    sample_customers = [
+        {
+            "email": "ahmed.hassan@example.com",
+            "first_name": "أحمد",
+            "last_name": "حسن",
+            "phone": "+971501234567",
+            "preferred_language": "ar",
+            "segment": "regular",
+            "total_orders": 3,
+            "total_spent": 450.0,
+            "billing_address": {
+                "street": "شارع الشيخ زايد",
+                "city": "دبي",
+                "state": "دبي",
+                "country": "الإمارات العربية المتحدة",
+                "postal_code": "12345"
+            }
+        },
+        {
+            "email": "fatima.al-zahra@example.com",
+            "first_name": "فاطمة",
+            "last_name": "الزهراء",
+            "phone": "+971507654321",
+            "preferred_language": "ar",
+            "segment": "vip",
+            "total_orders": 8,
+            "total_spent": 1200.0,
+            "billing_address": {
+                "street": "شارع الاتحاد",
+                "city": "أبوظبي",
+                "state": "أبوظبي",
+                "country": "الإمارات العربية المتحدة",
+                "postal_code": "54321"
+            }
+        },
+        {
+            "email": "omar.ibrahim@example.com",
+            "first_name": "عمر",
+            "last_name": "إبراهيم",
+            "phone": "+971509876543",
+            "preferred_language": "ar",
+            "segment": "new",
+            "total_orders": 1,
+            "total_spent": 89.99,
+            "billing_address": {
+                "street": "شارع الكرامة",
+                "city": "الشارقة",
+                "state": "الشارقة",
+                "country": "الإمارات العربية المتحدة",
+                "postal_code": "67890"
+            }
+        }
+    ]
+    
+    # Insert sample customers
+    for customer_data in sample_customers:
+        customer_obj = User(**customer_data)
+        prepared_data = prepare_for_mongo(customer_obj.dict())
+        await db.users.insert_one(prepared_data)
+    
+    # Get products for orders
+    products = await db.products.find().to_list(length=None)
+    if not products:
+        return {"message": "Please initialize products first"}
+    
+    # Create sample orders
+    sample_orders = [
+        {
+            "customer_id": "customer_1",
+            "items": [
+                {
+                    "product_id": products[0]["id"],
+                    "product_name": products[0]["translations"]["ar"]["name"],
+                    "price": products[0]["price"],
+                    "quantity": 2,
+                    "total": products[0]["price"] * 2
+                }
+            ],
+            "subtotal": products[0]["price"] * 2,
+            "tax_amount": products[0]["price"] * 2 * 0.1,
+            "shipping_cost": 10.0,
+            "discount_amount": 0.0,
+            "total_amount": products[0]["price"] * 2 * 1.1 + 10.0,
+            "status": "delivered",
+            "payment_method": "credit_card",
+            "shipping_address": {
+                "street": "شارع الشيخ زايد",
+                "city": "دبي",
+                "state": "دبي",
+                "country": "الإمارات العربية المتحدة",
+                "postal_code": "12345"
+            },
+            "billing_address": {
+                "street": "شارع الشيخ زايد",
+                "city": "دبي",
+                "state": "دبي",
+                "country": "الإمارات العربية المتحدة",
+                "postal_code": "12345"
+            },
+            "tracking_number": "TRK123456789"
+        },
+        {
+            "customer_id": "customer_2",
+            "items": [
+                {
+                    "product_id": products[1]["id"],
+                    "product_name": products[1]["translations"]["ar"]["name"],
+                    "price": products[1]["price"],
+                    "quantity": 1,
+                    "total": products[1]["price"]
+                },
+                {
+                    "product_id": products[2]["id"],
+                    "product_name": products[2]["translations"]["ar"]["name"],
+                    "price": products[2]["discounted_price"] or products[2]["price"],
+                    "quantity": 1,
+                    "total": products[2]["discounted_price"] or products[2]["price"]
+                }
+            ],
+            "subtotal": products[1]["price"] + (products[2]["discounted_price"] or products[2]["price"]),
+            "tax_amount": (products[1]["price"] + (products[2]["discounted_price"] or products[2]["price"])) * 0.1,
+            "shipping_cost": 0.0,
+            "discount_amount": 20.0,
+            "total_amount": (products[1]["price"] + (products[2]["discounted_price"] or products[2]["price"])) * 1.1 - 20.0,
+            "status": "processing",
+            "payment_method": "paypal",
+            "shipping_address": {
+                "street": "شارع الاتحاد",
+                "city": "أبوظبي",
+                "state": "أبوظبي",
+                "country": "الإمارات العربية المتحدة",
+                "postal_code": "54321"
+            },
+            "billing_address": {
+                "street": "شارع الاتحاد",
+                "city": "أبوظبي",
+                "state": "أبوظبي",
+                "country": "الإمارات العربية المتحدة",
+                "postal_code": "54321"
+            }
+        },
+        {
+            "customer_id": "customer_3",
+            "items": [
+                {
+                    "product_id": products[0]["id"],
+                    "product_name": products[0]["translations"]["ar"]["name"],
+                    "price": products[0]["discounted_price"] or products[0]["price"],
+                    "quantity": 1,
+                    "total": products[0]["discounted_price"] or products[0]["price"]
+                }
+            ],
+            "subtotal": products[0]["discounted_price"] or products[0]["price"],
+            "tax_amount": (products[0]["discounted_price"] or products[0]["price"]) * 0.1,
+            "shipping_cost": 10.0,
+            "discount_amount": 0.0,
+            "total_amount": (products[0]["discounted_price"] or products[0]["price"]) * 1.1 + 10.0,
+            "status": "pending_payment",
+            "payment_method": "cash_on_delivery",
+            "shipping_address": {
+                "street": "شارع الكرامة",
+                "city": "الشارقة",
+                "state": "الشارقة",
+                "country": "الإمارات العربية المتحدة",
+                "postal_code": "67890"
+            },
+            "billing_address": {
+                "street": "شارع الكرامة",
+                "city": "الشارقة",
+                "state": "الشارقة",
+                "country": "الإمارات العربية المتحدة",
+                "postal_code": "67890"
+            }
+        }
+    ]
+    
+    # Insert sample orders
+    for order_data in sample_orders:
+        order_obj = Order(**order_data)
+        prepared_data = prepare_for_mongo(order_obj.dict())
+        await db.orders.insert_one(prepared_data)
+    
+    # Create sample coupons
+    sample_coupons = [
+        {
+            "code": "WELCOME20",
+            "description": "خصم 20% للعملاء الجدد",
+            "discount_type": "percentage",
+            "discount_value": 20.0,
+            "minimum_order_amount": 50.0,
+            "max_usage_count": 100,
+            "current_usage_count": 15,
+            "valid_from": datetime.now(timezone.utc),
+            "valid_until": datetime.now(timezone.utc) + timedelta(days=30),
+            "is_active": True
+        },
+        {
+            "code": "FREESHIP",
+            "description": "شحن مجاني",
+            "discount_type": "free_shipping",
+            "discount_value": 0.0,
+            "minimum_order_amount": 0.0,
+            "max_usage_count": 50,
+            "current_usage_count": 8,
+            "valid_from": datetime.now(timezone.utc),
+            "valid_until": datetime.now(timezone.utc) + timedelta(days=60),
+            "is_active": True
+        }
+    ]
+    
+    # Insert sample coupons
+    for coupon_data in sample_coupons:
+        coupon_obj = Coupon(**coupon_data)
+        prepared_data = prepare_for_mongo(coupon_obj.dict())
+        await db.coupons.insert_one(prepared_data)
+    
+    return {
+        "message": f"Sample data initialized successfully",
+        "customers": len(sample_customers),
+        "orders": len(sample_orders),
+        "coupons": len(sample_coupons)
+    }
+
 @api_router.post("/admin/init-default-admin")
 async def init_default_admin():
     """Initialize default admin user"""
