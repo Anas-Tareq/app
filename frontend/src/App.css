@@ -471,3 +471,106 @@ a:focus-visible {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--burnt-orange);
 }
+
+/* Additional Elyvra Brand Styles */
+.brand-logo {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: 1.8rem;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.5px;
+}
+
+.elyvra-card {
+  background: var(--glass-gradient);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.elyvra-button-primary {
+  background: var(--accent-gradient);
+  color: var(--charcoal-black);
+  font-weight: 600;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.elyvra-button-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(212, 175, 55, 0.3);
+}
+
+.elyvra-button-secondary {
+  background: transparent;
+  color: var(--accent-orange);
+  border: 2px solid var(--accent-orange);
+  transition: all 0.3s ease;
+}
+
+.elyvra-button-secondary:hover {
+  background: var(--accent-orange);
+  color: var(--charcoal-black);
+}
+
+.elyvra-input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--glass-border);
+  color: white;
+  transition: border-color 0.3s ease;
+}
+
+.elyvra-input:focus {
+  border-color: var(--accent-orange);
+  box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.2);
+}
+
+.elyvra-sidebar {
+  background: linear-gradient(180deg, rgba(26, 26, 28, 0.95) 0%, rgba(15, 20, 25, 0.9) 100%);
+  border-right: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+}
+
+.elyvra-nav-item {
+  color: var(--light-gray);
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  margin: 4px 0;
+}
+
+.elyvra-nav-item:hover {
+  background: rgba(237, 137, 54, 0.1);
+  color: var(--accent-orange);
+}
+
+.elyvra-nav-item.active {
+  background: var(--accent-gradient);
+  color: var(--charcoal-black);
+}
+
+.elyvra-stats-card {
+  background: var(--glass-gradient);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  transition: transform 0.3s ease;
+}
+
+.elyvra-stats-card:hover {
+  transform: translateY(-4px);
+}
+
+.elyvra-text-gold {
+  color: var(--accent-orange);
+}
+
+.elyvra-bg-gold {
+  background: var(--accent-gradient);
+}
+
+.elyvra-border-gold {
+  border-color: var(--accent-orange);
+}
