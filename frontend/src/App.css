@@ -34,8 +34,9 @@ body {
 }
 
 .App {
+  background: linear-gradient(135deg, #1c1c1c 0%, #2a2a2a 50%, #404040 100%);
   min-height: 100vh;
-  background: var(--primary-gradient);
+  color: #ffffff;
   position: relative;
 }
 
